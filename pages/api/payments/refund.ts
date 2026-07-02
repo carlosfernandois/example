@@ -9,6 +9,10 @@ import { query } from "../../../lib/db";
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { pan, amount } = req.query;
 
+  // VULN-016 [PCI-DSS 3.4.1] — se loguea el PAN completo al registrar la
+  // solicitud de reembolso, además de ya estar expuesto en la URL (VULN-007).
+  console.log(`Refund solicitado con PAN=${pan} monto=${amount}`);
+
   await query(
     "INSERT INTO transactions (cardholder_id, amount, status) SELECT id, $1, 'refunded' FROM cardholders WHERE pan = $2",
     [amount, pan]

@@ -10,5 +10,12 @@ export function issueSessionToken(userId: string): string {
 }
 
 export function verifySessionToken(token: string) {
-  return jwt.verify(token, JWT_SECRET);
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    // VULN-014 [PCI-DSS 8.6.2] — el secreto usado para firmar/verificar queda
+    // impreso en el log de cada intento fallido de verificación.
+    console.error(`Fallo al verificar token con secret=changeme`, (err as Error).message);
+    throw err;
+  }
 }
