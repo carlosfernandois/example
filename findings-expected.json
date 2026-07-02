@@ -1,56 +1,479 @@
 {
   "_readme": "Ground truth para validar precisión/recall de IONIX Sentinel contra este repo, para código (Fase 1) y logs (Fase 2). Todo hallazgo comparte el mismo esquema con un campo 'origin' (code|log), igual que describe la arquitectura del proyecto. 'real_violations'/'log_violations' son hallazgos que el motor de reglas SÍ debería reportar. Los '*_negative_controls' son casos que NO deberían generar hallazgo — sirven para medir falsos positivos. 'log_anomalies' cubre HU-B4.3 (regla de umbral, no ML).",
-
+  "_rules_under_test_readme": "Snapshot de las 7 reglas del Motor de Reglas (backend/src/rules/pci-rules.yaml en Ionix-sentinel) contra las que se validó este fixture. Cada entrada de real_violations tiene 'rule_id' con el id de la regla que la cubre hoy, o null + 'gap_reason' si ninguna de las 7 la detecta todavía (gap conocido, no un bug). PCI-PAN-LITERAL no cubre ningún real_violation hoy: su rol es pasar TRAP-T1 (Luhn) sin falsos positivos, no detectar un PAN literal que no existe en este fixture.",
+  "rules_under_test": [
+    {
+      "id": "PCI-SECRET-HARDCODED",
+      "pciRequirement": "8.6.2",
+      "title": "Credencial o API key hardcodeada en el código fuente",
+      "severity": "high",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-PAN-CVV-LOGGED",
+      "pciRequirement": "3.4.1",
+      "title": "PAN o CVV impresos en logs de aplicación",
+      "severity": "critical",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-SQL-INJECTION",
+      "pciRequirement": "6.2.4",
+      "title": "Posible inyección SQL por interpolación en un template string",
+      "severity": "high",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-WEAK-CRYPTO",
+      "pciRequirement": "3.6.1",
+      "title": "Cifrado débil (modo ECB) usado para proteger datos de tarjeta",
+      "severity": "high",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-INSECURE-STORAGE-CLIENT",
+      "pciRequirement": "3.3",
+      "title": "PAN o CVV almacenados en localStorage del navegador",
+      "severity": "high",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-NO-TLS",
+      "pciRequirement": "4.2.1",
+      "title": "Conexión configurada explícitamente sin TLS",
+      "severity": "medium",
+      "detector": "regex",
+      "luhn": false
+    },
+    {
+      "id": "PCI-PAN-LITERAL",
+      "pciRequirement": "3.5.1",
+      "title": "Posible número de tarjeta (PAN) en texto plano en el código fuente",
+      "severity": "critical",
+      "detector": "regex",
+      "luhn": true
+    }
+  ],
   "real_violations": [
-    { "id": "VULN-001", "origin": "code", "file": "lib/db.ts", "line": 14, "pci_dss_requirement": "8.6.2", "title": "Credenciales de base de datos hardcodeadas", "severity": "high" },
-    { "id": "VULN-002", "origin": "code", "file": "migrations/001_init.sql", "line": 7, "pci_dss_requirement": "3.5.1", "title": "PAN almacenado en texto plano (VARCHAR sin cifrar/tokenizar)", "severity": "critical" },
-    { "id": "VULN-002b", "origin": "code", "file": "migrations/001_init.sql", "line": 8, "pci_dss_requirement": "3.3.3", "title": "Columna CVV persistida (SAD no debe almacenarse tras autorización)", "severity": "critical" },
-    { "id": "VULN-002c", "origin": "code", "file": "migrations/001_init.sql", "line": 9, "pci_dss_requirement": "3.3.2", "title": "Columna de track2/banda magnética completa (prohibido almacenar siempre)", "severity": "critical" },
-    { "id": "VULN-003a", "origin": "code", "file": "pages/api/payments/charge.ts", "line": 10, "pci_dss_requirement": "3.4.1", "title": "PAN y CVV completos escritos en logs de aplicación", "severity": "critical" },
-    { "id": "VULN-003b", "origin": "code", "file": "pages/api/payments/charge.ts", "line": 15, "pci_dss_requirement": "6.2.4", "title": "Inyección SQL por concatenación de strings con datos de usuario", "severity": "high" },
-    { "id": "VULN-003c", "origin": "code", "file": "pages/api/payments/charge.ts", "line": 24, "pci_dss_requirement": "3.3.2", "title": "Persistencia de track2_data vía UPDATE", "severity": "critical" },
-    { "id": "VULN-003d", "origin": "code", "file": "pages/api/payments/charge.ts", "line": 31, "pci_dss_requirement": "3.3.2", "title": "PAN/CVV embebidos en JSONB de respuesta de gateway", "severity": "high" },
-    { "id": "VULN-004", "origin": "code", "file": "lib/crypto.ts", "line": 10, "pci_dss_requirement": "3.6.1", "title": "Clave de cifrado hardcodeada + AES-128-ECB (modo débil) para proteger PAN", "severity": "high" },
-    { "id": "VULN-005", "origin": "code", "file": "lib/auth.ts", "line": 6, "pci_dss_requirement": "8.6.2", "title": "Secreto JWT hardcodeado y token de sesión sin expiración", "severity": "medium" },
-    { "id": "VULN-006", "origin": "code", "file": "pages/api/payments/[id].ts", "line": 8, "pci_dss_requirement": "7.2.1", "title": "Endpoint que expone PAN/CVV/track2 sin autenticación ni autorización", "severity": "critical" },
-    { "id": "VULN-007", "origin": "code", "file": "pages/api/payments/refund.ts", "line": 10, "pci_dss_requirement": "4.2.1", "title": "PAN transmitido como parámetro de query en petición GET", "severity": "high" },
-    { "id": "VULN-008a", "origin": "code", "file": "components/CheckoutForm.tsx", "line": 14, "pci_dss_requirement": "3.3", "title": "PAN guardado en localStorage del navegador", "severity": "high" },
-    { "id": "VULN-008a-cvv", "origin": "code", "file": "components/CheckoutForm.tsx", "line": 15, "pci_dss_requirement": "3.3", "title": "CVV guardado en localStorage del navegador", "severity": "high" },
-    { "id": "VULN-008b", "origin": "code", "file": "components/CheckoutForm.tsx", "line": 20, "pci_dss_requirement": "3.4.1", "title": "PAN y CVV impresos en consola del navegador", "severity": "medium" },
-    { "id": "VULN-009", "origin": "code", "file": "pages/api/webhooks/stripe.ts", "line": 6, "pci_dss_requirement": "8.6.2", "title": "API key de proveedor de pagos hardcodeada en código fuente", "severity": "high" },
-    { "id": "VULN-010", "origin": "code", "file": "components/AdminReconciliation.tsx", "line": 25, "pci_dss_requirement": "3.4.1", "title": "PAN renderizado completo sin enmascarar en UI de conciliación", "severity": "high" },
-    { "id": "VULN-011", "origin": "code", "file": "lib/db.ts", "line": 16, "pci_dss_requirement": "4.2.1", "title": "Conexión a base de datos sin TLS (ssl: false) para tráfico con PAN", "severity": "medium" },
-    { "id": "VULN-012", "origin": "code", "file": "pages/api/auth/login.ts", "line": 27, "pci_dss_requirement": "6.2.4", "title": "Manejo de errores inseguro: stack trace y detalle de excepción expuestos al cliente", "severity": "low" },
-    { "id": "VULN-013", "origin": "code", "file": "lib/db.ts", "line": 24, "pci_dss_requirement": "8.6.2", "title": "Connection string con password en texto plano logueada ante error del pool", "severity": "high" },
-    { "id": "VULN-014", "origin": "code", "file": "lib/auth.ts", "line": 18, "pci_dss_requirement": "8.6.2", "title": "Secreto JWT logueado en cada fallo de verificación de token", "severity": "medium" },
-    { "id": "VULN-015a", "origin": "code", "file": "pages/api/auth/login.ts", "line": 17, "pci_dss_requirement": "6.2.4", "title": "Log de intento fallido de login con mensaje fijo (base para detección de fuerza bruta)", "severity": "low" },
-    { "id": "VULN-015b", "origin": "code", "file": "pages/api/auth/login.ts", "line": 26, "pci_dss_requirement": "6.2.4", "title": "Stack trace y mensaje crudo de excepción logueados en servidor", "severity": "low" },
-    { "id": "VULN-016", "origin": "code", "file": "pages/api/payments/refund.ts", "line": 14, "pci_dss_requirement": "3.4.1", "title": "PAN completo logueado al procesar un refund", "severity": "critical" },
-    { "id": "VULN-017", "origin": "code", "file": "pages/api/payments/[id].ts", "line": 15, "pci_dss_requirement": "3.3.2", "title": "Registro completo de cardholder (incluye PAN/CVV/track2) logueado en cada consulta", "severity": "critical" }
+    {
+      "id": "VULN-001",
+      "origin": "code",
+      "file": "lib/db.ts",
+      "line": 14,
+      "pci_dss_requirement": "8.6.2",
+      "title": "Credenciales de base de datos hardcodeadas",
+      "severity": "high",
+      "rule_id": "PCI-SECRET-HARDCODED"
+    },
+    {
+      "id": "VULN-002",
+      "origin": "code",
+      "file": "migrations/001_init.sql",
+      "line": 7,
+      "pci_dss_requirement": "3.5.1",
+      "title": "PAN almacenado en texto plano (VARCHAR sin cifrar/tokenizar)",
+      "severity": "critical",
+      "rule_id": null,
+      "gap_reason": "vive en migrations/001_init.sql; el analizador de hoy solo escanea .ts/.tsx"
+    },
+    {
+      "id": "VULN-002b",
+      "origin": "code",
+      "file": "migrations/001_init.sql",
+      "line": 8,
+      "pci_dss_requirement": "3.3.3",
+      "title": "Columna CVV persistida (SAD no debe almacenarse tras autorización)",
+      "severity": "critical",
+      "rule_id": null,
+      "gap_reason": "vive en migrations/001_init.sql; el analizador de hoy solo escanea .ts/.tsx"
+    },
+    {
+      "id": "VULN-002c",
+      "origin": "code",
+      "file": "migrations/001_init.sql",
+      "line": 9,
+      "pci_dss_requirement": "3.3.2",
+      "title": "Columna de track2/banda magnética completa (prohibido almacenar siempre)",
+      "severity": "critical",
+      "rule_id": null,
+      "gap_reason": "vive en migrations/001_init.sql; el analizador de hoy solo escanea .ts/.tsx"
+    },
+    {
+      "id": "VULN-003a",
+      "origin": "code",
+      "file": "pages/api/payments/charge.ts",
+      "line": 10,
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN y CVV completos escritos en logs de aplicación",
+      "severity": "critical",
+      "rule_id": "PCI-PAN-CVV-LOGGED"
+    },
+    {
+      "id": "VULN-003b",
+      "origin": "code",
+      "file": "pages/api/payments/charge.ts",
+      "line": 15,
+      "pci_dss_requirement": "6.2.4",
+      "title": "Inyección SQL por concatenación de strings con datos de usuario",
+      "severity": "high",
+      "rule_id": "PCI-SQL-INJECTION"
+    },
+    {
+      "id": "VULN-003c",
+      "origin": "code",
+      "file": "pages/api/payments/charge.ts",
+      "line": 24,
+      "pci_dss_requirement": "3.3.2",
+      "title": "Persistencia de track2_data vía UPDATE",
+      "severity": "critical",
+      "rule_id": null,
+      "gap_reason": "persistencia vía UPDATE de track2_data; no hay regla de 'columna sensible en query' hoy"
+    },
+    {
+      "id": "VULN-003d",
+      "origin": "code",
+      "file": "pages/api/payments/charge.ts",
+      "line": 31,
+      "pci_dss_requirement": "3.3.2",
+      "title": "PAN/CVV embebidos en JSONB de respuesta de gateway",
+      "severity": "high",
+      "rule_id": null,
+      "gap_reason": "PAN/CVV embebidos en un objeto pasado a query(), no a console.*; PCI-PAN-CVV-LOGGED no aplica"
+    },
+    {
+      "id": "VULN-004",
+      "origin": "code",
+      "file": "lib/crypto.ts",
+      "line": 10,
+      "pci_dss_requirement": "3.6.1",
+      "title": "Clave de cifrado hardcodeada + AES-128-ECB (modo débil) para proteger PAN",
+      "severity": "high",
+      "rule_id": "PCI-WEAK-CRYPTO"
+    },
+    {
+      "id": "VULN-005",
+      "origin": "code",
+      "file": "lib/auth.ts",
+      "line": 6,
+      "pci_dss_requirement": "8.6.2",
+      "title": "Secreto JWT hardcodeado y token de sesión sin expiración",
+      "severity": "medium",
+      "rule_id": "PCI-SECRET-HARDCODED"
+    },
+    {
+      "id": "VULN-006",
+      "origin": "code",
+      "file": "pages/api/payments/[id].ts",
+      "line": 8,
+      "pci_dss_requirement": "7.2.1",
+      "title": "Endpoint que expone PAN/CVV/track2 sin autenticación ni autorización",
+      "severity": "critical",
+      "rule_id": null,
+      "gap_reason": "requiere análisis de control de acceso (ausencia de middleware de auth), no un patrón de texto"
+    },
+    {
+      "id": "VULN-007",
+      "origin": "code",
+      "file": "pages/api/payments/refund.ts",
+      "line": 10,
+      "pci_dss_requirement": "4.2.1",
+      "title": "PAN transmitido como parámetro de query en petición GET",
+      "severity": "high",
+      "rule_id": null,
+      "gap_reason": "P1 (stretch): regla PCI-PAN-QUERYSTRING no construida en el MVP de hoy"
+    },
+    {
+      "id": "VULN-008a",
+      "origin": "code",
+      "file": "components/CheckoutForm.tsx",
+      "line": 14,
+      "pci_dss_requirement": "3.3",
+      "title": "PAN guardado en localStorage del navegador",
+      "severity": "high",
+      "rule_id": "PCI-INSECURE-STORAGE-CLIENT"
+    },
+    {
+      "id": "VULN-008a-cvv",
+      "origin": "code",
+      "file": "components/CheckoutForm.tsx",
+      "line": 15,
+      "pci_dss_requirement": "3.3",
+      "title": "CVV guardado en localStorage del navegador",
+      "severity": "high",
+      "rule_id": "PCI-INSECURE-STORAGE-CLIENT"
+    },
+    {
+      "id": "VULN-008b",
+      "origin": "code",
+      "file": "components/CheckoutForm.tsx",
+      "line": 20,
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN y CVV impresos en consola del navegador",
+      "severity": "medium",
+      "rule_id": "PCI-PAN-CVV-LOGGED"
+    },
+    {
+      "id": "VULN-009",
+      "origin": "code",
+      "file": "pages/api/webhooks/stripe.ts",
+      "line": 6,
+      "pci_dss_requirement": "8.6.2",
+      "title": "API key de proveedor de pagos hardcodeada en código fuente",
+      "severity": "high",
+      "rule_id": "PCI-SECRET-HARDCODED"
+    },
+    {
+      "id": "VULN-010",
+      "origin": "code",
+      "file": "components/AdminReconciliation.tsx",
+      "line": 25,
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN renderizado completo sin enmascarar en UI de conciliación",
+      "severity": "high",
+      "rule_id": null,
+      "gap_reason": "requiere detectar ausencia de enmascarado en JSX renderizado, no un patrón de texto"
+    },
+    {
+      "id": "VULN-011",
+      "origin": "code",
+      "file": "lib/db.ts",
+      "line": 16,
+      "pci_dss_requirement": "4.2.1",
+      "title": "Conexión a base de datos sin TLS (ssl: false) para tráfico con PAN",
+      "severity": "medium",
+      "rule_id": "PCI-NO-TLS"
+    },
+    {
+      "id": "VULN-012",
+      "origin": "code",
+      "file": "pages/api/auth/login.ts",
+      "line": 27,
+      "pci_dss_requirement": "6.2.4",
+      "title": "Manejo de errores inseguro: stack trace y detalle de excepción expuestos al cliente",
+      "severity": "low",
+      "rule_id": null,
+      "gap_reason": "P1 (stretch): regla PCI-VERBOSE-ERROR no construida en el MVP de hoy"
+    },
+    {
+      "id": "VULN-013",
+      "origin": "code",
+      "file": "lib/db.ts",
+      "line": 24,
+      "pci_dss_requirement": "8.6.2",
+      "title": "Connection string con password en texto plano logueada ante error del pool",
+      "severity": "high",
+      "rule_id": null,
+      "gap_reason": "console.error interpola una variable (CONNECTION_STRING), no una asignación literal; no matchea PCI-SECRET-HARDCODED"
+    },
+    {
+      "id": "VULN-014",
+      "origin": "code",
+      "file": "lib/auth.ts",
+      "line": 18,
+      "pci_dss_requirement": "8.6.2",
+      "title": "Secreto JWT logueado en cada fallo de verificación de token",
+      "severity": "medium",
+      "rule_id": null,
+      "gap_reason": "el secreto aparece dentro de un template string de log, no como asignación; no matchea PCI-SECRET-HARDCODED"
+    },
+    {
+      "id": "VULN-015a",
+      "origin": "code",
+      "file": "pages/api/auth/login.ts",
+      "line": 17,
+      "pci_dss_requirement": "6.2.4",
+      "title": "Log de intento fallido de login con mensaje fijo (base para detección de fuerza bruta)",
+      "severity": "low",
+      "rule_id": null,
+      "gap_reason": "mensaje fijo de intento fallido; es insumo del Analizador de Logs (LOG-ANOM-1), no una regla de código"
+    },
+    {
+      "id": "VULN-015b",
+      "origin": "code",
+      "file": "pages/api/auth/login.ts",
+      "line": 26,
+      "pci_dss_requirement": "6.2.4",
+      "title": "Stack trace y mensaje crudo de excepción logueados en servidor",
+      "severity": "low",
+      "rule_id": null,
+      "gap_reason": "stack trace logueado en servidor; sin regla dedicada hoy (mismo hueco que VULN-012)"
+    },
+    {
+      "id": "VULN-016",
+      "origin": "code",
+      "file": "pages/api/payments/refund.ts",
+      "line": 14,
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN completo logueado al procesar un refund",
+      "severity": "critical",
+      "rule_id": "PCI-PAN-CVV-LOGGED"
+    },
+    {
+      "id": "VULN-017",
+      "origin": "code",
+      "file": "pages/api/payments/[id].ts",
+      "line": 15,
+      "pci_dss_requirement": "3.3.2",
+      "title": "Registro completo de cardholder (incluye PAN/CVV/track2) logueado en cada consulta",
+      "severity": "critical",
+      "rule_id": "PCI-PAN-CVV-LOGGED"
+    }
   ],
-
   "negative_controls": [
-    { "id": "TRAP-T1", "origin": "code", "file": "lib/testCards.ts", "line": 7, "title": "Secuencias de 16 dígitos que fallan Luhn — no son PAN reales", "expected_behavior": "NO debe reportarse como hallazgo de PAN expuesto" },
-    { "id": "TRAP-T2", "origin": "code", "file": "lib/mask.ts", "line": 8, "title": "Implementación correcta de enmascaramiento de PAN (first6+last4)", "expected_behavior": "NO debe reportarse como hallazgo" },
-    { "id": "TRAP-T3", "origin": "code", "file": "lib/crypto.ts", "line": 22, "title": "encryptPanStrong: AES-256-GCM con clave desde env var e IV aleatorio", "expected_behavior": "NO debe reportarse como hallazgo (o, si se reporta, debe ser severidad informativa, no violación)" }
+    {
+      "id": "TRAP-T1",
+      "origin": "code",
+      "file": "lib/testCards.ts",
+      "line": 7,
+      "title": "Secuencias de 16 dígitos que fallan Luhn — no son PAN reales",
+      "expected_behavior": "NO debe reportarse como hallazgo de PAN expuesto"
+    },
+    {
+      "id": "TRAP-T2",
+      "origin": "code",
+      "file": "lib/mask.ts",
+      "line": 8,
+      "title": "Implementación correcta de enmascaramiento de PAN (first6+last4)",
+      "expected_behavior": "NO debe reportarse como hallazgo"
+    },
+    {
+      "id": "TRAP-T3",
+      "origin": "code",
+      "file": "lib/crypto.ts",
+      "line": 22,
+      "title": "encryptPanStrong: AES-256-GCM con clave desde env var e IV aleatorio",
+      "expected_behavior": "NO debe reportarse como hallazgo (o, si se reporta, debe ser severidad informativa, no violación)"
+    }
   ],
-
   "log_violations": [
-    { "id": "LOG-001", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Procesando cargo de", "correlates_with": { "vuln_id": "VULN-003a", "file": "pages/api/payments/charge.ts" }, "pci_dss_requirement": "3.4.1", "title": "PAN y CVV completos en log de producción al procesar un cargo", "severity": "critical" },
-    { "id": "LOG-002", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Verificando webhook con key:", "correlates_with": { "vuln_id": "VULN-009", "file": "pages/api/webhooks/stripe.ts" }, "pci_dss_requirement": "8.6.2", "title": "API key de Stripe visible en log de producción", "severity": "high" },
-    { "id": "LOG-003", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Refund solicitado con PAN=", "correlates_with": { "vuln_id": "VULN-016", "file": "pages/api/payments/refund.ts" }, "pci_dss_requirement": "3.4.1", "title": "PAN completo en log de aplicación al procesar refund", "severity": "critical" },
-    { "id": "LOG-004", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "GET /api/payments/refund?pan=", "correlates_with": { "vuln_id": "VULN-007", "file": "pages/api/payments/refund.ts" }, "pci_dss_requirement": "4.2.1", "title": "PAN completo en log de acceso HTTP (query string)", "severity": "high" },
-    { "id": "LOG-005", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Registro de conciliación consultado:", "correlates_with": { "vuln_id": "VULN-017", "file": "pages/api/payments/[id].ts" }, "pci_dss_requirement": "3.3.2", "title": "PAN/CVV/track2 completos en log al consultar conciliación", "severity": "critical" },
-    { "id": "LOG-006", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Error en el pool de Postgres usando postgres://app_user:P4ymentsProd!2024@", "correlates_with": { "vuln_id": "VULN-013", "file": "lib/db.ts" }, "pci_dss_requirement": "8.6.2", "title": "Password de base de datos en texto plano en log de error", "severity": "high" },
-    { "id": "LOG-007", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "Fallo al verificar token con secret=changeme", "correlates_with": { "vuln_id": "VULN-014", "file": "lib/auth.ts" }, "pci_dss_requirement": "8.6.2", "title": "Secreto JWT hardcodeado visible en log de error", "severity": "medium" },
-    { "id": "LOG-008", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "relation \"users\" does not exist", "correlates_with": { "vuln_id": "VULN-015b", "file": "pages/api/auth/login.ts" }, "pci_dss_requirement": "6.2.4", "title": "Stack trace / detalle de excepción SQL en log de producción", "severity": "low" }
+    {
+      "id": "LOG-001",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Procesando cargo de",
+      "correlates_with": {
+        "vuln_id": "VULN-003a",
+        "file": "pages/api/payments/charge.ts"
+      },
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN y CVV completos en log de producción al procesar un cargo",
+      "severity": "critical"
+    },
+    {
+      "id": "LOG-002",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Verificando webhook con key:",
+      "correlates_with": {
+        "vuln_id": "VULN-009",
+        "file": "pages/api/webhooks/stripe.ts"
+      },
+      "pci_dss_requirement": "8.6.2",
+      "title": "API key de Stripe visible en log de producción",
+      "severity": "high"
+    },
+    {
+      "id": "LOG-003",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Refund solicitado con PAN=",
+      "correlates_with": {
+        "vuln_id": "VULN-016",
+        "file": "pages/api/payments/refund.ts"
+      },
+      "pci_dss_requirement": "3.4.1",
+      "title": "PAN completo en log de aplicación al procesar refund",
+      "severity": "critical"
+    },
+    {
+      "id": "LOG-004",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "GET /api/payments/refund?pan=",
+      "correlates_with": {
+        "vuln_id": "VULN-007",
+        "file": "pages/api/payments/refund.ts"
+      },
+      "pci_dss_requirement": "4.2.1",
+      "title": "PAN completo en log de acceso HTTP (query string)",
+      "severity": "high"
+    },
+    {
+      "id": "LOG-005",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Registro de conciliación consultado:",
+      "correlates_with": {
+        "vuln_id": "VULN-017",
+        "file": "pages/api/payments/[id].ts"
+      },
+      "pci_dss_requirement": "3.3.2",
+      "title": "PAN/CVV/track2 completos en log al consultar conciliación",
+      "severity": "critical"
+    },
+    {
+      "id": "LOG-006",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Error en el pool de Postgres usando postgres://app_user:P4ymentsProd!2024@",
+      "correlates_with": {
+        "vuln_id": "VULN-013",
+        "file": "lib/db.ts"
+      },
+      "pci_dss_requirement": "8.6.2",
+      "title": "Password de base de datos en texto plano en log de error",
+      "severity": "high"
+    },
+    {
+      "id": "LOG-007",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "Fallo al verificar token con secret=changeme",
+      "correlates_with": {
+        "vuln_id": "VULN-014",
+        "file": "lib/auth.ts"
+      },
+      "pci_dss_requirement": "8.6.2",
+      "title": "Secreto JWT hardcodeado visible en log de error",
+      "severity": "medium"
+    },
+    {
+      "id": "LOG-008",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "relation \"users\" does not exist",
+      "correlates_with": {
+        "vuln_id": "VULN-015b",
+        "file": "pages/api/auth/login.ts"
+      },
+      "pci_dss_requirement": "6.2.4",
+      "title": "Stack trace / detalle de excepción SQL en log de producción",
+      "severity": "low"
+    }
   ],
-
   "log_negative_controls": [
-    { "id": "LOG-TRAP-1", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "4111111111111112", "title": "PAN de 16 dígitos que falla Luhn en log de rechazo", "expected_behavior": "NO debe reportarse como hallazgo de PAN expuesto (mismo criterio que TRAP-T1)" },
-    { "id": "LOG-TRAP-2", "origin": "log", "file": "logs/production-sample.log", "grep_literal": "453914******6467", "title": "PAN ya enmascarado (first6+last4) en log de confirmación", "expected_behavior": "NO debe reportarse como hallazgo" }
+    {
+      "id": "LOG-TRAP-1",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "4111111111111112",
+      "title": "PAN de 16 dígitos que falla Luhn en log de rechazo",
+      "expected_behavior": "NO debe reportarse como hallazgo de PAN expuesto (mismo criterio que TRAP-T1)"
+    },
+    {
+      "id": "LOG-TRAP-2",
+      "origin": "log",
+      "file": "logs/production-sample.log",
+      "grep_literal": "453914******6467",
+      "title": "PAN ya enmascarado (first6+last4) en log de confirmación",
+      "expected_behavior": "NO debe reportarse como hallazgo"
+    }
   ],
-
   "log_anomalies": [
     {
       "id": "LOG-ANOM-1",
