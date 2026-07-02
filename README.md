@@ -54,6 +54,22 @@ Para probar que el motor de reglas determinístico no dispara falsos positivos (
 
 Correr `node scripts/generate-production-logs.js > logs/production-sample.log` regenera el archivo de forma determinística.
 
+### Cómo correr el análisis contra este fixture
+
+El Analizador de Logs necesita dos rutas: dónde está el log y dónde está el código para la correlación (HU-B4.2). En este repo ambas cosas son la **misma carpeta raíz**, porque `logs/` vive a propósito junto al código. Ejemplo de invocación:
+
+```bash
+sentinel analyze-logs --log <ruta-fixture>/logs/production-sample.log --repo <ruta-fixture>
+```
+
+Donde `<ruta-fixture>` es donde tengan este repo checkeado localmente (ver sección de HU-B1.1 en `epicas-historias.md` sobre cómo traerlo como carpeta separada sin cambiar de rama: worktree, ZIP de la rama, o submódulo).
+
+Notas de implementación:
+
+- El archivo es **NDJSON** (una línea = un JSON completo e independiente). Basta iterar línea por línea y hacer `JSON.parse` — no requiere un parser más complejo.
+- El motor de reglas es el mismo que el del Analizador Estático (regla dura del proyecto: no se construye uno paralelo). En la práctica, cada línea de log se puede tratar como "contenido a analizar" y pasarse por las mismas reglas propias PCI-DSS que ya corren sobre código, generando un finding con el mismo esquema pero `"origin": "log"`.
+- Para validar el resultado, comparar los hallazgos emitidos contra `log_violations`, `log_negative_controls` y `log_anomalies` en `findings-expected.json` (no solo contra `real_violations`/`negative_controls`, que son los de código).
+
 ### Correlación código↔log (HU-B4.2)
 
 Los mensajes de log reutilizan el **mismo literal fijo** que el `console.log`/`console.error` del código fuente que los origina (VULN-013 a VULN-017, más VULN-003a, VULN-007 y VULN-009). Esto es a propósito: la especificación del proyecto dice que la correlación se resuelve con un grep del string literal del log sobre el repo — no algo más sofisticado. Ejemplo: la línea de log con `"Procesando cargo de ..."` se resuelve haciendo `grep -r "Procesando cargo de" .`, que apunta directo a `pages/api/payments/charge.ts`.
